@@ -1,5 +1,5 @@
 """
-Swiftmess is a Python module to parse SWIFT messages used for financial transactions in banking.
+Swiftmess3 is a Python module to parse SWIFT messages used for financial transactions in banking.
 """
 # Copyright (c) 2012, Thomas Aglassinger
 #
@@ -22,7 +22,7 @@ from datetime import date, datetime
 
 _log = logging.getLogger('swift')
 
-__version__ = '0.2'
+__version__ = '1.0'
 
 _FamtMarker = 'FAMT/'
 
