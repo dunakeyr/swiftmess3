@@ -1,4 +1,6 @@
-Parses ISO15022 into python tuples. Since this is a fork I wasn't able to test all the MT file types, but I tested it with a MT-535 file successfully.
+Parses ISO15022 into python tuples. 
+
+Since this is a fork I wasn't able to test all the MT file types, but I tested it with a MT-535 file successfully.
 
 ```
 import swiftmess3
