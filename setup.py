@@ -46,7 +46,7 @@ setup(
     author='Thomas Aglassinger',
     author_email='roskakori@users.sourceforge.net',
     url='http://pypi.python.org/pypi/swiftmess3/',
-    long_description=swiftmess.__doc__,  # @UndefinedVariable
+    long_description=swiftmess3.__doc__,  # @UndefinedVariable
     install_requires=['setuptools'],
     classifiers=[
         'Development Status :: 4 - Beta',
