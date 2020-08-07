@@ -1,5 +1,5 @@
 '''
-Installer for swiftmess.
+Installer for swiftmess3.
 
 Developer cheat sheet
 ---------------------
@@ -11,7 +11,7 @@ Create the installer archive::
 Upload release to PyPI::
 
   $ pep8 -r --ignore=E501 *.py test/*.py
-  $ python test/test_swiftmess.py
+  $ python test/test_swiftmess3.py
   $ python setup.py sdist --formats=zip upload
 
 Tag a release::
@@ -35,17 +35,17 @@ Tag a release::
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from setuptools import setup
 
-import swiftmess
+import swiftmess3
 
 setup(
-    name='swiftmess',
-    version=swiftmess.__version__,
-    py_modules=['swiftmess'],
+    name='swiftmess3',
+    version=swiftmess3.__version__,
+    py_modules=['swiftmess3'],
     description='parse SWIFT messages for financial transactions',
     keywords='swift bank banking financial message',
     author='Thomas Aglassinger',
     author_email='roskakori@users.sourceforge.net',
-    url='http://pypi.python.org/pypi/swiftmess/',
+    url='http://pypi.python.org/pypi/swiftmess3/',
     long_description=swiftmess.__doc__,  # @UndefinedVariable
     install_requires=['setuptools'],
     classifiers=[
@@ -56,9 +56,7 @@ setup(
         'License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.5',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Office/Business :: Financial',
         'Topic :: Text Processing'
     ]
