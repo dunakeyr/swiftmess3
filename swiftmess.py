@@ -1,6 +1,6 @@
-'''
+"""
 Swiftmess is a Python module to parse SWIFT messages used for financial transactions in banking.
-'''
+"""
 # Copyright (c) 2012, Thomas Aglassinger
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -26,12 +26,13 @@ __version__ = '0.2'
 
 _FamtMarker = 'FAMT/'
 
+
 class Error(Exception):
     pass
 
 
-def messageItems(readable):
-    '''
+def message_items(readable):
+    """
     Message items found in ``readable`` as tuples of the form ``(nestingLevel, type, value)`` with:
 
     * nestingLevel: level of nested blocks
@@ -40,7 +41,7 @@ def messageItems(readable):
       and for 'message' this is ``None``.
 
     The messages have to be stored in EDIFACT / ISO 15022 format.
-    '''
+    """
     assert readable is not None
 
     # Possible values for ``state``.
@@ -58,8 +59,8 @@ def messageItems(readable):
     level = 0
 
     char = readable.read(1)
-    while (char != ''):
-        _log.debug('level=%d, char=%r, state=%s, text=%r', level, char, state, text)
+    while char:
+        _log.debug(f'level={level}, char={char}, state={state}, text={text}')
         if char == '\r':
             pass
         elif state == _BeforeStartOfBlock:
@@ -69,24 +70,24 @@ def messageItems(readable):
                 text = ''
             elif char == '}':
                 if level == 0:
-                    raise Error('unmatched %r outside of any block must be removed' % char)
+                    raise Error(f'unmatched {char} outside of any block must be removed')
                 level -= 1
             elif char == '\n':
                 if level != 0:
-                    raise Error(u'nested block must be closed (state=%r, level=%d)' % (state, level))
-                yield (level, 'message', None)
+                    raise Error(f'nested block must be closed (state={state}, level={level})')
+                yield level, 'message', None
             elif char != '\r':
-                raise Error('block must start with %r instead of %r' % ('{', char))
+                raise Error(f'block must start with {{ instead of {char}')
         elif state == _InBlockKey:
             if char == ':':
                 state = _InLine
-                blockKey = long(text)
-                yield (level, 'block', blockKey)
+                blockKey = int(text)
+                yield level, 'block', blockKey
                 text = None
             elif char.isdigit():
                 text += char
             else:
-                raise Error('block id must consist of decimal digits bug encountered %r' % char)
+                raise Error(f'block id must consist of decimal digits bug encountered {char}')
         elif state == _InLine:
             if char == '{':
                 state = _InBlockKey
@@ -100,7 +101,7 @@ def messageItems(readable):
                 state = _InFieldKey
                 text = ''
             elif char == '\n':
-                yield (level, 'value', '')
+                yield level, 'value', ''
             else:
                 state = _InValue
                 text = char
@@ -113,8 +114,8 @@ def messageItems(readable):
                 text += char
         elif state == _InFieldValue:
             if (char == '\n') or char == '}':
-                yield (level, 'field', fieldKey)
-                yield (level, 'value', text)
+                yield level, 'field', fieldKey
+                yield level, 'value', text
                 fieldKey = None
                 text = None
                 if char == '}':
@@ -127,7 +128,7 @@ def messageItems(readable):
                 text += char
         elif state == _InValue:
             if (char == '\n') or char == '}':
-                yield (level, 'value', text)
+                yield level, 'value', text
                 text = None
                 if char == '}':
                     state = _BeforeStartOfBlock
@@ -139,9 +140,10 @@ def messageItems(readable):
                 text += char
         char = readable.read(1)
     if state != _BeforeStartOfBlock:
-        raise Error(u'block must be closed (state=%r)' % state)
+        raise Error(f'block must be closed (state={state})')
     if level != 0:
-        raise Error(u'nested block must be closed (state=%r, level=%d)' % (state, level))
+        raise Error(f'nested block must be closed (state={state}, level={level})')
+
 
 def structuredItems(messageToRead):
     assert messageToRead is not None
@@ -149,30 +151,30 @@ def structuredItems(messageToRead):
     field = None
     value = None
     valuesSoFar = []
-    for level, kind, value in messageItems(messageToRead):
-        # TODO: remove: print u'    %d, %s, %s' % (level, kind, value)
+    for level, kind, value in message_items(messageToRead):
         if kind == 'block':
             if block is not None:
-                yield (level, block, field, valuesSoFar)
+                yield level, block, field, valuesSoFar
             block = value
             field = None
             valuesSoFar = []
         elif kind == 'field':
             if block is None:
-                raise Error(u'block for field "%s" must be specified' % value)
-            yield (level, block, field, valuesSoFar)
+                raise Error(f'block for field "{value}" must be specified')
+            yield level, block, field, valuesSoFar
             field = value
             valuesSoFar = []
         elif kind == 'value':
             valuesSoFar.append(value)
         else:
-            assert False, u'kind=%r' % kind
+            assert False, f'kind={kind}'
     # Yield the last item.
     if valuesSoFar:
-        yield (level, block, field, valuesSoFar)
+        yield level, block, field, valuesSoFar
+
 
 class Trade(object):
-    '''A trade in a `Report`.'''
+    """A trade in a `Report`."""
     def __init__(self):
         self.accrInterest = None
         self.ca = None
@@ -190,34 +192,35 @@ class Trade(object):
         self.tradeSettlement = None
         self.tradeType = None
         self.transactionType = None
-        
+
+
 class Report(object):
     def __init__(self, messageToRead):
         assert messageToRead is not None
         self.report = None
         for item in structuredItems(messageToRead):
-            _log.debug(u'item: %s', item)
+            _log.debug(f'item: {item}')
             leveBlockField = item[:3]
             if self.report is None:
                 if leveBlockField == (1, 4, '77E'):
                     report = self._valueFor(item, '/TRNA')
                     if self.report is None:
                         self.report = report
-                        if self.report == u'RAWCE260':
+                        if self.report == 'RAWCE260':
                             self._initCe260()
                     else:
-                        raise Error(u'cannot set report to "%s" because it already is "%s"' % (report, self.report))
-            elif self.report == u'RAWCE260':
+                        raise Error(f'cannot set report to "{report}" because it already is "{self.report}"')
+            elif self.report == 'RAWCE260':
                 self._processCe260(item)
             else:
-                raise Error(u'cannot (yet) read reports of type "%s"' % self.report)
+                raise Error(f'cannot (yet) read reports of type "{self.report}"')
 
-        if self.report == u'RAWCE260':
+        if self.report == 'RAWCE260':
             # Add possibly remaining trade.
             self._appendPossibleTrade()
             self._trade = None
-            if self.trades == []:
-                raise Error(u'report must contain at least 1 trade (starting with :94B::PRIC)')
+            if not self.trades:
+                raise Error('report must contain at least 1 trade (starting with :94B::PRIC)')
 
     def _valueFor(self, item, valuePrefix, strip=True, required=True, defaultValue=None):
         assert item is not None
@@ -239,7 +242,7 @@ class Report(object):
                 valueIndex += 1
         if result is None:
             if required:
-                raise Error(u'block %d, field "%s" must contain %s but found only: %s' % (block, field, valuePrefix, values))
+                raise Error(f'block {block}, field "{field}" must contain {valuePrefix} but found only: {values}')
             else:
                 result = defaultValue
         return result
@@ -248,14 +251,17 @@ class Report(object):
         assert item is not None
         _, block, field, values = item
         if len(values) != 1:
-            raise Error(u'value in block "%s", field "%s" must fit into one line but is: %r' % (block, field, values))
+            raise Error(f'value in block "{block}", field "{field}" must fit into one line but is: {values}')
         # TODO: compile regex.
         finding = re.match(r'[:](?P<name>.+)//(?P<value>.*)', values[0])
         if finding is None:
-            raise Error(u'value in block "%s", field "%s" must contain text matching ":<NAME>//<VALUE>" but is: %r' % (block, field, values))
+            raise Error(
+                f'value in block "{block}", field "{field}" '
+                f'must contain text matching ":<NAME>//<VALUE>" but is: {values}'
+            )
         name = finding.group('name')
         value = finding.group('value')
-        return (name, value)
+        return name, value
 
     def _dateFromIsoText(self, item, name, text):
         assert item is not None
@@ -264,17 +270,17 @@ class Report(object):
         _, block, field, _ = item
         try:
             textAsTime = datetime.strptime(text, '%Y%m%d')
-        except ValueError, error:
-            message = u'cannot convert "%s" in block "%s", field "%s"' % (text, block, field)
+        except ValueError as error:
+            message = f'cannot convert "{text}" in block "{block}", field "{field}"'
             if name is not None:
-                message += u', item "%s"' % name
-            message += u' to date: %s' % error
+                message += f', item "{name}"'
+            message += f' to date: {error}'
             raise Error(message)
         result = date(textAsTime.year, textAsTime.month, textAsTime.day)
         return result
 
     def _decimalFrom(self, item, name, value):
-        '''
+        """
         A ``decimal.Decimal`` from ``value`` properly handling all kinds of separators.
 
         Examples:
@@ -285,7 +291,7 @@ class Report(object):
         * _decimalFrom(..., '123456.78') --> 123456.78
         * _decimalFrom(..., '123,456.78') --> 123456.78
         * _decimalFrom(..., '123.456,78') --> 123456.78
-        '''
+        """
         assert item is not None
         assert value is not None
 
@@ -301,41 +307,41 @@ class Report(object):
             unifiedValue = value.replace(',', '')
         try:
             result = decimal.Decimal(unifiedValue)
-        except Exception, error:
+        except Exception as error:
             _, block, field, _ = item
-            message = u'cannot convert "%s" in block "%s", field "%s"' % (value, block, field)
+            message = f'cannot convert "{value}" in block "{block}", field "{field}"'
             if name is not None:
-                message += u', item "%s"' % name
-            message += u' to decimal: %s' % error
+                message += f', item "{name}"'
+            message += f' to decimal: {error}'
             raise Error(message)
 
         return result
 
     def _currencyAndAmountFrom(self, item, name, value):
-        '''
+        """
         tuple with currency (as ISO code) and amount extracted from ``value``.
 
-        Example: 'EUR123,45' --> (u'EUR', 123.45)
-        '''
+        Example: 'EUR123,45' --> ('EUR', 123.45)
+        """
         assert item is not None
         assert value is not None
 
         def errorMessage(details):
             _, block, field, _ = item
-            result = u'cannot convert "%s" in block "%s", field "%s"' % (value, block, field)
+            result = f'cannot convert "{value}" in block "{block}", field "{field}"'
             if name is not None:
-                result += u', item "%s"' % name
-            result += u' to currency and amount: %s' % details
+                result += f', item "{name}"'
+            result += f' to currency and amount: {details}'
             return result
 
         if len(value) < 4:
-            raise Error(errorMessage(u'value must have at least 4 characters'))
+            raise Error(errorMessage('value must have at least 4 characters'))
         currency = value[:3]
         try:
             amount = self._decimalFrom(item, name, value[3:])
-        except Exception, error:
+        except Exception as error:
             raise Error(errorMessage(error))
-        return (currency, amount)
+        return currency, amount
 
     def _initCe260(self):
         self.financialInstrument = None
@@ -345,7 +351,7 @@ class Report(object):
 
     def _checkHasTrade(self, field, name=None):
         if self._trade is None:
-            message = u'trade must start with 94B::PRIC before details can be specified with '
+            message = 'trade must start with 94B::PRIC before details can be specified with '
             if name is None:
                 message += field
             else:
@@ -369,8 +375,8 @@ class Report(object):
             if values[0].startswith(TrDeHeader):
                 transactionDetails = [values[0][len(TrDeHeader):]]
                 transactionDetails.extend(values[1:])
-                detailsText = u' '.join(transactionDetails)
-                for detail in detailsText.split(u'/'):
+                detailsText = ' '.join(transactionDetails)
+                for detail in detailsText.split('/'):
                     detail = detail.rstrip()
                     if detail != '':
                         indexOfFirstSpace = detail.find(' ')
@@ -381,10 +387,10 @@ class Report(object):
                             name = detail
                             value = None
                         if name in result:
-                            raise Error(u'duplicate transaction detail "%s" must be removed: %s' % (name, transactionDetails))
+                            raise Error(f'duplicate transaction detail "{name}" must be removed: {transactionDetails}')
                         result[name] = value
             else:
-                raise Error(u'transaction details in field "%s" must start with "%s" but are: %s' % (field, TrDeHeader, values))
+                raise Error(f'transaction details in field "{field}" must start with "{TrDeHeader}" but are: {values}')
             return result
 
         level, block, field, values = item
@@ -403,7 +409,10 @@ class Report(object):
                     self._checkHasTrade(field, name)
                     _TradeNumberIndex = 8
                     if len(value) <= _TradeNumberIndex:
-                        raise Error(u'trade number in %s::%s must have at least %d characters: "%s"' % (field, name, _TradeNumberIndex + 1, value))
+                        raise Error(
+                            f'trade number in {field}::{name} '
+                            f'must have at least {_TradeNumberIndex + 1} characters: "{value}"'
+                        )
                     self._trade.tradeNumber = value[_TradeNumberIndex:]
             elif field == '35B':
                 self.financialInstrument = values
@@ -415,7 +424,7 @@ class Report(object):
                         nominalText = value[len(_FamtMarker):]
                         try:
                             self._trade.nominal = self._decimalFrom(item, name, nominalText)
-                        except Exception, error:
+                        except Exception as error:
                             raise Error(error)
             elif field == '70E':
                 self._checkHasTrade(field)
