@@ -1,4 +1,4 @@
-'''Tests for `swiftmess`.
+'''Tests for `swiftmess3`.
 '''
 # Copyright (c) 2012, Thomas Aglassinger
 #
@@ -19,7 +19,7 @@ from __future__ import with_statement
 import logging
 import os
 import unittest
-import swiftmess
+import swiftmess3
 
 _log = logging.getLogger('swift')
 
@@ -29,7 +29,7 @@ def _testFilePath(name):
     return os.path.join(basePath, name)
 
 
-class TestSwiftmess(unittest.TestCase):
+class TestSwiftmess3(unittest.TestCase):
 
     def testCanReadMessageItems(self):
         ExpectedItems = [
@@ -72,7 +72,7 @@ class TestSwiftmess(unittest.TestCase):
             (0, 'message', None)
         ]
         with open(_testFilePath('rawce290.txt')) as testFile:
-            actualItems = list(swiftmess.messageItems(testFile))
+            actualItems = list(swiftmess3.messageItems(testFile))
             self.assertEqual(actualItems, ExpectedItems)
 
 
